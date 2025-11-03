@@ -272,7 +272,7 @@ On some platforms, the time stamp given to packets on live captures can
 come from different sources that can have different resolutions or that
 can have different relationships to the time values for the current time
 supplied by routines on the native operating system.  See
-.BR pcap-tstamp (@MAN_MISC_INFO@)
+.BR \%pcap-tstamp (@MAN_MISC_INFO@)
 for a list of time stamp types.
 .IP
 The time stamp type is set with
@@ -598,35 +598,35 @@ The callback for
 and
 .BR pcap_loop ()
 is supplied a pointer to a
-.IR "struct pcap_pkthdr" ,
+.BR "struct pcap_pkthdr" ,
 which includes the following members:
 .RS
 .TP
 .B ts
 a
-.I struct timeval
+.B struct timeval
 containing the time when the packet was captured
 .TP
 .B caplen
 a
-.I bpf_u_int32
+.B bpf_u_int32
 giving the number of bytes of the packet that are available from the
 capture
 .TP
 .B len
 a
-.I bpf_u_int32
+.B bpf_u_int32
 giving the length of the packet, in bytes (which might be more than the
 number of bytes available from the capture, if the length of the packet
 is larger than the maximum number of bytes to capture).
 .RE
 .PP
 The callback is also supplied a
-.I const u_char
+.B const u_char
 pointer to the first
 .B caplen
 (as given in the
-.I struct pcap_pkthdr
+.B struct pcap_pkthdr
 mentioned above)
 bytes of data from the packet.  This won't necessarily be the entire
 packet; to capture the entire packet, you will have to provide a value
@@ -641,10 +641,10 @@ performed will limit the amount of packet data available.
 .PP
 .BR pcap_next ()
 is passed an argument that points to a
-.I struct pcap_pkthdr
+.B struct pcap_pkthdr
 structure, and fills it in with the time stamp and length values for the
 packet.  It returns a
-.I const u_char
+.B const u_char *
 to the first
 .B caplen
 bytes of the packet on success, and
@@ -653,11 +653,11 @@ on error.
 .PP
 .BR pcap_next_ex ()
 is passed two pointer arguments, one of which points to a
-.IR struct pcap_pkthdr *
-and one of which points to a
-.IR "const u_char" *.
+.B struct pcap_pkthdr *
+and the other points to a
+.BR "const u_char *" .
 It sets the first pointer to point to a
-.I struct pcap_pkthdr
+.B struct pcap_pkthdr
 structure with the time stamp and length values for the packet, and sets
 the second pointer to point to the first
 .B caplen
@@ -720,7 +720,7 @@ periodically for packets; in that case,
 will return a pointer to a
 .B struct timeval
 whose value can be used as a timeout in those routines.  When the
-routine returns, an attmept should be made to read packets from the
+routine returns, an attempt should be made to read packets from the
 device.  If
 .BR pcap_get_required_select_timeout ()
 returns
@@ -784,17 +784,17 @@ get the state of non-blocking mode for a
 attempt to get a descriptor for a
 .B pcap_t
 that can be used in calls such as
-.BR select (2)
+.BR select ()
 and
-.BR poll (2)
+.BR poll ()
 .TP
 .BR pcap_get_required_select_timeout (3PCAP)
 attempt to get a timeout required for using a
 .B pcap_t
 in calls such as
-.BR select (2)
+.BR select ()
 and
-.BR poll (2)
+.BR poll ()
 .RE
 .SS Filters
 In order to cause only certain packets to be returned when reading
@@ -804,7 +804,7 @@ copying ``uninteresting'' packets from the kernel to user mode.
 .PP
 A filter can be specified as a text string; the syntax and semantics of
 the string are as described by
-.BR pcap-filter (@MAN_MISC_INFO@).
+.BR \%pcap-filter (@MAN_MISC_INFO@).
 A filter string is compiled into a program in a pseudo-machine-language
 by
 .BR pcap_compile ()
@@ -894,13 +894,19 @@ call
 .BR pcap_dump_open (3PCAP)
 open a
 .B pcap_dumper_t
-for a ``savefile``, given a pathname
+for a ``savefile``, given a pathname, replacing any existing data
+.TP
+.BR pcap_dump_open_append (3PCAP)
+open a
+.B pcap_dumper_t
+for a ``savefile``, given a pathname, appending to the existing data
 .TP
 .BR pcap_dump_fopen (3PCAP)
 open a
 .B pcap_dumper_t
 for a ``savefile``, given a
-.B "FILE\ *"
+.BR "FILE\ *" ,
+assuming an empty file
 .TP
 .BR pcap_dump_close (3PCAP)
 close a
@@ -1027,7 +1033,7 @@ script or some other configuration script to check whether the libpcap
 .BR autoconf (1),
 .BR tcpdump (1),
 .BR tcpslice (1),
-.BR pcap-filter (@MAN_MISC_INFO@),
+.BR \%pcap-filter (@MAN_MISC_INFO@),
 .BR pfconfig (8),
 .BR usermod (@MAN_ADMIN_COMMANDS@)
 .SH AUTHORS
@@ -1044,7 +1050,7 @@ The current version is available from "The Tcpdump Group"'s Web site at
 .I https://www.tcpdump.org/
 .RE
 .SH BUGS
-To report a security issue please send an e-mail to security@tcpdump.org.
+To report a security issue please send an e-mail to \%security@tcpdump.org.
 .LP
 To report bugs and other problems, contribute patches, request a
 feature, provide generic feedback etc please see the file

@@ -117,9 +117,6 @@
 /* Define to 1 if you have the <net/pfilt.h> header file. */
 #cmakedefine HAVE_NET_PFILT_H 1
 
-/* Define to 1 if you have the <net/pfvar.h> header file. */
-#cmakedefine HAVE_NET_PFVAR_H 1
-
 /* Define to 1 if you have the <net/raw.h> header file. */
 #cmakedefine HAVE_NET_RAW_H 1
 
@@ -138,9 +135,6 @@
 /* Define to 1 if you have a POSIX-style `strerror_r' function. */
 #cmakedefine HAVE_POSIX_STRERROR_R 1
 
-/* define if net/pfvar.h defines PF_NAT through PF_NORDR */
-#cmakedefine HAVE_PF_NAT_THROUGH_PF_NORDR 1
-
 /* define if you have the Septel API */
 #cmakedefine HAVE_SEPTEL_API 1
 
@@ -156,6 +150,9 @@
 /* On solaris */
 #cmakedefine HAVE_SOLARIS 1
 
+/* target host supports Solaris "any" device */
+#cmakedefine HAVE_SOLARIS_ANY_DEVICE 1
+
 /* define if we have the Solaris/IRIX getnetbyname_r() */
 #cmakedefine HAVE_SOLARIS_IRIX_GETNETBYNAME_R 1
 
@@ -167,9 +164,6 @@
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #cmakedefine HAVE_STDLIB_H 1
-
-/* Define to 1 if you have the `strerror' function. */
-#cmakedefine HAVE_STRERROR 1
 
 /* Define to 1 if you have the <strings.h> header file. */
 #cmakedefine HAVE_STRINGS_H 1
@@ -273,9 +267,6 @@
 
 /* IPv6 */
 #cmakedefine INET6 1
-
-/* path for device for USB sniffing */
-#cmakedefine LINUX_USB_MON_DEV "@LINUX_USB_MON_DEV@"
 
 /* Define to 1 if netinet/ether.h declares `ether_hostton' */
 #cmakedefine NETINET_ETHER_H_DECLARES_ETHER_HOSTTON 1
