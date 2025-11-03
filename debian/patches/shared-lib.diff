@@ -1,5 +1,7 @@
-Debian-specific modifications to the upstream Makefile.in to
-build a shared library.
+Description: Debian-specific modifications to build a shared library
+Author: Torsten Landschoff <torsten@debian.org>
+Author: Romain Francoise <rfrancoise@debian.org>
+Forwarded: not-needed
 
 --- a/Makefile.in
 +++ b/Makefile.in
@@ -18,17 +20,17 @@ build a shared library.
  #
  # You shouldn't need to edit anything below.
  #
-@@ -70,7 +78,8 @@
- EXTRA_NETWORK_LIBS=@EXTRA_NETWORK_LIBS@
+@@ -69,7 +77,8 @@
+ INSTALL_RPCAPD=@INSTALL_RPCAPD@
  
  # Standard CFLAGS for building members of a shared library
 -FULL_CFLAGS = $(CCOPT) @V_LIB_CCOPT_FAT@ $(SHLIB_CCOPT) $(INCLS) $(DEFS) $(CFLAGS)
 +FULL_CFLAGS = $(CCOPT) @V_LIB_CCOPT_FAT@ $(SHLIB_CCOPT) $(INCLS) $(DEFS) $(CFLAGS) $(CPPFLAGS)
 +CFLAGS_SHARED = -shared -Wl,-soname,$(SOLIBRARY).$(MAJ) -Wl,--version-script=libpcap-symbols.lds
- CXXFLAGS = $(CCOPT) @V_LIB_CCOPT_FAT@ $(SHLIB_CCOPT) $(INCLS) $(DEFS) $(CFLAGS)
  
  INSTALL = @INSTALL@
-@@ -86,7 +95,11 @@
+ INSTALL_PROGRAM = @INSTALL_PROGRAM@
+@@ -84,7 +93,11 @@
  # problem if you don't own the file but can write to the directory.
  .c.o:
  	@rm -f $@
@@ -40,8 +42,8 @@ build a shared library.
 +	$(CC) -fPIC $(FULL_CFLAGS) -c -o $@ $(srcdir)/$*.c
  
  PLATFORM_C_SRC =	@PLATFORM_C_SRC@
- PLATFORM_CXX_SRC =	@PLATFORM_CXX_SRC@
-@@ -110,6 +123,10 @@
+ MODULE_C_SRC =		@MODULE_C_SRC@
+@@ -106,6 +119,10 @@
  	$(MODULE_C_SRC:.c=.o) $(REMOTE_C_SRC:.c=.o) $(COMMON_C_SRC:.c=.o) \
  	$(GENERATED_C_SRC:.c=.o) \
  	$(LIBOBJS)
@@ -52,16 +54,17 @@ build a shared library.
  
  PUBHDR = \
  	pcap.h \
-@@ -165,7 +182,7 @@
+@@ -165,7 +182,8 @@
  
  CLEANFILES = $(OBJ) libpcap.a libpcap.so.`cat $(srcdir)/VERSION` \
  	$(PROG)-`cat $(srcdir)/VERSION`.tar.gz $(GENERATED_C_SRC) $(GENHDR) \
--	lex.yy.c pcap-config libpcap.pc
-+	lex.yy.c pcap-config libpcap.pc $(OBJ_PIC) $(SHARED_LIB)
+-	lex.yy.c pcap-config libpcap.pc libpcap.$(DYEXT)
++	lex.yy.c pcap-config libpcap.pc libpcap.$(DYEXT) \
++	$(OBJ_PIC) $(SHAREDLIB) $(SOLIBRARY) $(SOLIBRARY).$(MAJ)
  
  MAN1 = pcap-config.1
  
-@@ -422,7 +439,7 @@
+@@ -433,7 +451,7 @@
  	$(AR) rc $@ $(OBJ) $(ADDLARCHIVEOBJS)
  	$(RANLIB) $@
  
@@ -70,7 +73,7 @@ build a shared library.
  
  libpcap.so: $(OBJ)
  	@rm -f $@
-@@ -498,6 +515,13 @@
+@@ -509,6 +527,13 @@
  #
  libpcap.none:
  
@@ -84,7 +87,7 @@ build a shared library.
  scanner.c: $(srcdir)/scanner.l
  	$(LEX) -P pcap_ --header-file=scanner.h --nounput -o scanner.c $<
  scanner.h: scanner.c
-@@ -510,6 +534,9 @@
+@@ -521,6 +546,9 @@
  scanner.o: scanner.c grammar.h
  	$(CC) $(FULL_CFLAGS) -c scanner.c
  
@@ -94,7 +97,7 @@ build a shared library.
  #
  # Generate the grammar.y file.
  #
-@@ -541,24 +568,45 @@
+@@ -552,24 +580,45 @@
  grammar.o: grammar.c scanner.h
  	$(CC) $(FULL_CFLAGS) -c grammar.c
  
@@ -140,7 +143,7 @@ build a shared library.
  #
  # Generate the libpcap.pc file.
  #
-@@ -680,14 +728,12 @@
+@@ -691,14 +740,12 @@
  		    $(DESTDIR)$(mandir)/man@MAN_MISC_INFO@/`echo $$i | sed 's/.manmisc.in/.@MAN_MISC_INFO@/'`; done
  
  install-shared: install-shared-$(DYEXT)
@@ -161,18 +164,18 @@ build a shared library.
  	    (mkdir -p $(DESTDIR)$(libdir); chmod 755 $(DESTDIR)$(libdir))
 --- a/aclocal.m4
 +++ b/aclocal.m4
-@@ -507,7 +507,7 @@
+@@ -515,7 +515,7 @@
  			esac
  			;;
  		    esac
 -		    V_SHLIB_CCOPT="$V_SHLIB_CCOPT $PIC_OPT"
 +		    V_SHLIB_CCOPT="$V_SHLIB_CCOPT"
  		    V_SONAME_OPT="-Wl,-soname,"
- 		    V_RPATH_OPT="-Wl,-rpath,"
  		    ;;
-@@ -570,7 +570,7 @@
+ 
+@@ -583,7 +583,7 @@
  		    #
- 		    # "cc" is GCC.
+ 		    # XXX - does 64-bit SPARC require -fPIC?
  		    #
 -		    V_SHLIB_CCOPT="$V_SHLIB_CCOPT -fpic"
 +		    V_SHLIB_CCOPT="$V_SHLIB_CCOPT"

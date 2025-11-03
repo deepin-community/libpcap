@@ -30,11 +30,10 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include "ftmacros.h"
+#include "diag-control.h"
 
 #include <errno.h>		// for the errno variable
 #include <string.h>		// for strtok, etc
@@ -73,7 +72,7 @@
 //
 struct listen_sock {
 	struct listen_sock *next;
-	SOCKET sock;
+	PCAP_SOCKET sock;
 };
 
 // Global variables
@@ -91,7 +90,7 @@ static HANDLE state_change_event;		//!< event to signal that a state change shou
 #endif
 static volatile sig_atomic_t shutdown_server;	//!< '1' if the server is to shut down
 static volatile sig_atomic_t reread_config;	//!< '1' if the server is to re-read its configuration
-static int uses_ssl; //!< '1' to use TLS over the data socket
+static int uses_ssl;				//!< '1' to use TLS over TCP
 
 extern char *optarg;	// for getopt()
 
@@ -105,7 +104,7 @@ static void main_terminate(int sign);
 static void main_reread_config(int sign);
 #endif
 static void accept_connections(void);
-static void accept_connection(SOCKET listen_sock);
+static void accept_connection(PCAP_SOCKET listen_sock);
 #ifndef _WIN32
 static void main_reap_children(int sign);
 #endif
@@ -198,8 +197,8 @@ int main(int argc, char *argv[])
 	// Initialize errbuf
 	memset(errbuf, 0, sizeof(errbuf));
 
-	pcap_strlcpy(address, RPCAP_DEFAULT_NETADDR, sizeof (address));
-	pcap_strlcpy(port, RPCAP_DEFAULT_NETPORT, sizeof (port));
+	pcapint_strlcpy(address, RPCAP_DEFAULT_NETADDR, sizeof (address));
+	pcapint_strlcpy(port, RPCAP_DEFAULT_NETPORT, sizeof (port));
 
 	// Prepare to open a new server socket
 	memset(&mainhints, 0, sizeof(struct addrinfo));
@@ -226,10 +225,10 @@ int main(int argc, char *argv[])
 				rpcapd_log_set(log_to_systemlog, log_debug_messages);
 				break;
 			case 'b':
-				pcap_strlcpy(address, optarg, sizeof (address));
+				pcapint_strlcpy(address, optarg, sizeof (address));
 				break;
 			case 'p':
-				pcap_strlcpy(port, optarg, sizeof (port));
+				pcapint_strlcpy(port, optarg, sizeof (port));
 				break;
 			case '4':
 				mainhints.ai_family = PF_INET;		// IPv4 server only
@@ -257,7 +256,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'l':
 			{
-				pcap_strlcpy(hostlist, optarg, sizeof(hostlist));
+				pcapint_strlcpy(hostlist, optarg, sizeof(hostlist));
 				break;
 			}
 			case 'a':
@@ -266,20 +265,20 @@ int main(int argc, char *argv[])
 				char *lasts;
 				int i = 0;
 
-				tmpaddress = pcap_strtok_r(optarg, RPCAP_HOSTLIST_SEP, &lasts);
+				tmpaddress = pcapint_strtok_r(optarg, RPCAP_HOSTLIST_SEP, &lasts);
 
 				while ((tmpaddress != NULL) && (i < MAX_ACTIVE_LIST))
 				{
-					tmpport = pcap_strtok_r(NULL, RPCAP_HOSTLIST_SEP, &lasts);
+					tmpport = pcapint_strtok_r(NULL, RPCAP_HOSTLIST_SEP, &lasts);
 
-					pcap_strlcpy(activelist[i].address, tmpaddress, sizeof (activelist[i].address));
+					pcapint_strlcpy(activelist[i].address, tmpaddress, sizeof (activelist[i].address));
 
 					if ((tmpport == NULL) || (strcmp(tmpport, "DEFAULT") == 0)) // the user choose a custom port
-						pcap_strlcpy(activelist[i].port, RPCAP_DEFAULT_NETPORT_ACTIVE, sizeof (activelist[i].port));
+						pcapint_strlcpy(activelist[i].port, RPCAP_DEFAULT_NETPORT_ACTIVE, sizeof (activelist[i].port));
 					else
-						pcap_strlcpy(activelist[i].port, tmpport, sizeof (activelist[i].port));
+						pcapint_strlcpy(activelist[i].port, tmpport, sizeof (activelist[i].port));
 
-					tmpaddress = pcap_strtok_r(NULL, RPCAP_HOSTLIST_SEP, &lasts);
+					tmpaddress = pcapint_strtok_r(NULL, RPCAP_HOSTLIST_SEP, &lasts);
 
 					i++;
 				}
@@ -292,10 +291,10 @@ int main(int argc, char *argv[])
 				break;
 			}
 			case 'f':
-				pcap_strlcpy(loadfile, optarg, sizeof (loadfile));
+				pcapint_strlcpy(loadfile, optarg, sizeof (loadfile));
 				break;
 			case 's':
-				pcap_strlcpy(savefile, optarg, sizeof (savefile));
+				pcapint_strlcpy(savefile, optarg, sizeof (savefile));
 				break;
 #ifdef HAVE_OPENSSL
 			case 'S':
@@ -337,7 +336,7 @@ int main(int argc, char *argv[])
 		rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 		exit(-1);
 	}
-	pcap_fmt_set_encoding(PCAP_CHAR_ENC_UTF_8);
+	pcapint_fmt_set_encoding(PCAP_CHAR_ENC_UTF_8);
 
 	if (sock_init(errbuf, PCAP_ERRBUF_SIZE) == -1)
 	{
@@ -360,8 +359,8 @@ int main(int argc, char *argv[])
 	state_change_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (state_change_event == NULL)
 	{
-		sock_geterror("Can't create state change event", errbuf,
-		    PCAP_ERRBUF_SIZE);
+		sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+		    "Can't create state change event");
 		rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 		exit(2);
 	}
@@ -371,8 +370,8 @@ int main(int argc, char *argv[])
 	//
 	if (!SetConsoleCtrlHandler(main_ctrl_event, TRUE))
 	{
-		sock_geterror("Can't set control handler", errbuf,
-		    PCAP_ERRBUF_SIZE);
+		sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+		    "Can't set control handler");
 		rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 		exit(2);
 	}
@@ -389,7 +388,13 @@ int main(int argc, char *argv[])
 	sigaction(SIGCHLD, &action, NULL);
 	// Ignore SIGPIPE - we'll get EPIPE when trying to write to a closed
 	// connection, we don't want to get killed by a signal in that case
+#ifdef __illumos__
+	DIAG_OFF_STRICT_PROTOTYPES
+#endif /* __illumos__ */
 	signal(SIGPIPE, SIG_IGN);
+#ifdef __illumos__
+	DIAG_ON_STRICT_PROTOTYPES
+#endif /* __illumos__ */
 #endif
 
 # ifdef HAVE_OPENSSL
@@ -426,8 +431,8 @@ int main(int argc, char *argv[])
 		sockctrl = dup(0);
 		if (sockctrl == -1)
 		{
-			sock_geterror("Can't dup standard input", errbuf,
-			    PCAP_ERRBUF_SIZE);
+			sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+			    "Can't dup standard input");
 			rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 			exit(2);
 		}
@@ -503,7 +508,7 @@ int main(int argc, char *argv[])
 
 		// LINUX WARNING: the current linux implementation of pthreads requires a management thread
 		// to handle some hidden stuff. So, as soon as you create the first thread, two threads are
-		// created. Fom this point on, the number of threads active are always one more compared
+		// created. From this point on, the number of threads active are always one more compared
 		// to the number you're expecting
 
 		// Second child continues
@@ -610,7 +615,9 @@ void main_startup(void)
 		//
 		// Get a list of sockets on which to listen.
 		//
-		if (sock_initaddress((address[0]) ? address : NULL, port, &mainhints, &addrinfo, errbuf, PCAP_ERRBUF_SIZE) == -1)
+		addrinfo = sock_initaddress((address[0]) ? address : NULL,
+		    port, &mainhints, errbuf, PCAP_ERRBUF_SIZE);
+		if (addrinfo == NULL)
 		{
 			rpcapd_log(LOGPRIO_DEBUG, "%s", errbuf);
 			return;
@@ -619,10 +626,10 @@ void main_startup(void)
 		for (tempaddrinfo = addrinfo; tempaddrinfo;
 		     tempaddrinfo = tempaddrinfo->ai_next)
 		{
-			SOCKET sock;
+			PCAP_SOCKET sock;
 			struct listen_sock *sock_info;
 
-			if ((sock = sock_open(tempaddrinfo, SOCKOPEN_SERVER, SOCKET_MAXCONN, errbuf, PCAP_ERRBUF_SIZE)) == INVALID_SOCKET)
+			if ((sock = sock_open(NULL, tempaddrinfo, SOCKOPEN_SERVER, SOCKET_MAXCONN, errbuf, PCAP_ERRBUF_SIZE)) == INVALID_SOCKET)
 			{
 				switch (tempaddrinfo->ai_family)
 				{
@@ -735,8 +742,8 @@ send_state_change_event(void)
 
 	if (!SetEvent(state_change_event))
 	{
-		sock_geterror("SetEvent on shutdown event failed", errbuf,
-		    PCAP_ERRBUF_SIZE);
+		sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+		    "SetEvent on shutdown event failed");
 		rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 	}
 }
@@ -779,7 +786,7 @@ static BOOL WINAPI main_ctrl_event(DWORD ctrltype)
 	// CTRL_CLOSE_EVENT - the console was closed; this is like SIGHUP
 	// CTRL_LOGOFF_EVENT - a user is logging off; this is received
 	//   only by services
-	// CTRL_SHUTDOWN_EVENT - the systemis shutting down; this is
+	// CTRL_SHUTDOWN_EVENT - the system is shutting down; this is
 	//   received only by services
 	//
 	// For now, we treat all but CTRL_LOGOFF_EVENT as indications
@@ -903,15 +910,15 @@ accept_connections(void)
 		event = WSACreateEvent();
 		if (event == WSA_INVALID_EVENT)
 		{
-			sock_geterror("Can't create socket event", errbuf,
-			    PCAP_ERRBUF_SIZE);
+			sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+			    "Can't create socket event");
 			rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 			exit(2);
 		}
 		if (WSAEventSelect(sock_info->sock, event, FD_ACCEPT) == SOCKET_ERROR)
 		{
-			sock_geterror("Can't setup socket event", errbuf,
-			    PCAP_ERRBUF_SIZE);
+			sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+			    "Can't setup socket event");
 			rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 			exit(2);
 		}
@@ -929,8 +936,8 @@ accept_connections(void)
 		    WSA_INFINITE, FALSE);
 		if (ret == WSA_WAIT_FAILED)
 		{
-			sock_geterror("WSAWaitForMultipleEvents failed", errbuf,
-			    PCAP_ERRBUF_SIZE);
+			sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+			    "WSAWaitForMultipleEvents failed");
 			rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 			exit(2);
 		}
@@ -969,8 +976,8 @@ accept_connections(void)
 			if (WSAEnumNetworkEvents(sock_info->sock,
 			    events[i], &network_events) == SOCKET_ERROR)
 			{
-				sock_geterror("WSAEnumNetworkEvents failed",
-				    errbuf, PCAP_ERRBUF_SIZE);
+				sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+				    "WSAEnumNetworkEvents failed");
 				rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 				exit(2);
 			}
@@ -984,10 +991,10 @@ accept_connections(void)
 					//
 					// Yes - report it and keep going.
 					//
-					sock_fmterror("Socket error",
+					sock_fmterrmsg(errbuf,
+					    PCAP_ERRBUF_SIZE,
 					    network_events.iErrorCode[FD_ACCEPT_BIT],
-					    errbuf,
-					    PCAP_ERRBUF_SIZE);
+					    "Socket error");
 					rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 					continue;
 				}
@@ -1120,7 +1127,7 @@ accept_connections(void)
 // fork "inherits" the parent stack.)
 //
 struct params_copy {
-	SOCKET sockctrl;
+	PCAP_SOCKET sockctrl;
 	char *hostlist;
 };
 #endif
@@ -1130,10 +1137,10 @@ struct params_copy {
 // worker process, on UN*X, to handle the connection.
 //
 static void
-accept_connection(SOCKET listen_sock)
+accept_connection(PCAP_SOCKET listen_sock)
 {
 	char errbuf[PCAP_ERRBUF_SIZE + 1];	// keeps the error string, prior to be printed
-	SOCKET sockctrl;			// keeps the socket ID for this control connection
+	PCAP_SOCKET sockctrl;			// keeps the socket ID for this control connection
 	struct sockaddr_storage from;		// generic sockaddr_storage variable
 	socklen_t fromlen;			// keeps the length of the sockaddr_storage variable
 
@@ -1173,7 +1180,7 @@ accept_connection(SOCKET listen_sock)
 
 		// Don't check for errors here, since the error can be due to the fact that the thread
 		// has been killed
-		sock_geterror("accept()", errbuf, PCAP_ERRBUF_SIZE);
+		sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE, "accept() failed");
 		rpcapd_log(LOGPRIO_ERROR, "Accept of control connection from client failed: %s",
 		    errbuf);
 		return;
@@ -1197,14 +1204,16 @@ accept_connection(SOCKET listen_sock)
 	//
 	if (WSAEventSelect(sockctrl, NULL, 0) == SOCKET_ERROR)
 	{
-		sock_geterror("WSAEventSelect()", errbuf, PCAP_ERRBUF_SIZE);
+		sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+		    "WSAEventSelect() failed");
 		rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 		sock_close(sockctrl, NULL, 0);
 		return;
 	}
 	if (ioctlsocket(sockctrl, FIONBIO, &off) == SOCKET_ERROR)
 	{
-		sock_geterror("ioctlsocket(FIONBIO)", errbuf, PCAP_ERRBUF_SIZE);
+		sock_geterrmsg(errbuf, PCAP_ERRBUF_SIZE,
+		    "ioctlsocket(FIONBIO) failed");
 		rpcapd_log(LOGPRIO_ERROR, "%s", errbuf);
 		sock_close(sockctrl, NULL, 0);
 		return;
@@ -1325,7 +1334,7 @@ static void *
 main_active(void *ptr)
 {
 	char errbuf[PCAP_ERRBUF_SIZE + 1];	// keeps the error string, prior to be printed
-	SOCKET sockctrl;			// keeps the socket ID for this control connection
+	PCAP_SOCKET sockctrl;			// keeps the socket ID for this control connection
 	struct addrinfo hints;			// temporary struct to keep settings needed to open the new socket
 	struct addrinfo *addrinfo;		// keeps the addrinfo chain; required to open a new socket
 	struct active_pars *activepars;
@@ -1347,7 +1356,9 @@ main_active(void *ptr)
 	memset(errbuf, 0, sizeof(errbuf));
 
 	// Do the work
-	if (sock_initaddress(activepars->address, activepars->port, &hints, &addrinfo, errbuf, PCAP_ERRBUF_SIZE) == -1)
+	addrinfo = sock_initaddress(activepars->address, activepars->port,
+	    &hints, errbuf, PCAP_ERRBUF_SIZE);
+	if (addrinfo == NULL)
 	{
 		rpcapd_log(LOGPRIO_DEBUG, "%s", errbuf);
 		return 0;
@@ -1357,13 +1368,15 @@ main_active(void *ptr)
 	{
 		int activeclose;
 
-		if ((sockctrl = sock_open(addrinfo, SOCKOPEN_CLIENT, 0, errbuf, PCAP_ERRBUF_SIZE)) == INVALID_SOCKET)
+		if ((sockctrl = sock_open(activepars->address, addrinfo, SOCKOPEN_CLIENT, 0, errbuf, PCAP_ERRBUF_SIZE)) == INVALID_SOCKET)
 		{
 			rpcapd_log(LOGPRIO_DEBUG, "%s", errbuf);
 
+			DIAG_OFF_FORMAT_TRUNCATION
 			snprintf(errbuf, PCAP_ERRBUF_SIZE, "Error connecting to host %s, port %s, using protocol %s",
 					activepars->address, activepars->port, (hints.ai_family == AF_INET) ? "IPv4":
 					(hints.ai_family == AF_INET6) ? "IPv6" : "Unspecified");
+			DIAG_ON_FORMAT_TRUNCATION
 
 			rpcapd_log(LOGPRIO_DEBUG, "%s", errbuf);
 

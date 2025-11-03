@@ -27,9 +27,7 @@ static const char copyright[] _U_ =
 The Regents of the University of California.  All rights reserved.\n";
 #endif
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <pcap.h>
 #include <stdio.h>
@@ -217,7 +215,6 @@ main(int argc, char **argv)
 	int snaplen;
 	char *p;
 	int dlt;
-	int have_fcode = 0;
 	bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
 	char *cmdbuf;
 	pcap_t *pd;
@@ -253,10 +250,10 @@ main(int argc, char **argv)
 		case 'g':
 #ifdef BDEBUG
 			++gflag;
+			break;
 #else
 			error("libpcap and filtertest not built with optimizer debugging enabled");
 #endif
-			break;
 
 		case 'F':
 			infile = optarg;
@@ -273,12 +270,10 @@ main(int argc, char **argv)
 
 			case 0:
 				error("invalid netmask %s", optarg);
-				break;
 
 			case -1:
 				error("invalid netmask %s: %s", optarg,
 				    pcap_strerror(errno));
-				break;
 
 			case 1:
 				netmask = addr;
@@ -340,7 +335,6 @@ main(int argc, char **argv)
 	if (pcap_compile(pd, &fcode, cmdbuf, Oflag, netmask) < 0)
 		error("%s", pcap_geterr(pd));
 
-	have_fcode = 1;
 	if (!bpf_validate(fcode.bf_insns, fcode.bf_len))
 		warn("Filter doesn't pass validation");
 
@@ -360,8 +354,7 @@ main(int argc, char **argv)
 
 	bpf_dump(&fcode, dflag);
 	free(cmdbuf);
-	if (have_fcode)
-		pcap_freecode (&fcode);
+	pcap_freecode (&fcode);
 	pcap_close(pd);
 	exit(0);
 }

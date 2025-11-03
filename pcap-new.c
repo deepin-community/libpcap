@@ -31,11 +31,10 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include "ftmacros.h"
+#include "diag-control.h"
 
 /*
  * sockutils.h may include <crtdbg.h> on Windows, and pcap-int.h will
@@ -143,7 +142,7 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 			dev->name = strdup(tmpstring);
 			if (dev->name == NULL)
 			{
-				pcap_fmt_errmsg_for_errno(errbuf,
+				pcapint_fmt_errmsg_for_errno(errbuf,
 				    PCAP_ERRBUF_SIZE, errno,
 				    "malloc() failed");
 				pcap_freealldevs(*alldevs);
@@ -157,11 +156,11 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 				localdesc = dev->name;
 			else
 				localdesc = dev->description;
-			if (pcap_asprintf(&desc, "%s '%s' %s",
+			if (pcapint_asprintf(&desc, "%s '%s' %s",
 			    PCAP_TEXT_SOURCE_ADAPTER, localdesc,
 			    PCAP_TEXT_SOURCE_ON_LOCAL_HOST) == -1)
 			{
-				pcap_fmt_errmsg_for_errno(errbuf,
+				pcapint_fmt_errmsg_for_errno(errbuf,
 				    PCAP_ERRBUF_SIZE, errno,
 				    "malloc() failed");
 				pcap_freealldevs(*alldevs);
@@ -231,13 +230,25 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 #else
 		/* opening the folder */
 		unixdir= opendir(path);
+		if (unixdir == NULL) {
+			DIAG_OFF_FORMAT_TRUNCATION
+			snprintf(errbuf, PCAP_ERRBUF_SIZE,
+			    "Error when listing files in '%s': %s", path, pcap_strerror(errno));
+			DIAG_ON_FORMAT_TRUNCATION
+			return -1;
+		}
 
 		/* get the first file into it */
+		errno = 0;
 		filedata= readdir(unixdir);
 
 		if (filedata == NULL)
 		{
-			snprintf(errbuf, PCAP_ERRBUF_SIZE, "Error when listing files: does folder '%s' exist?", path);
+			DIAG_OFF_FORMAT_TRUNCATION
+			snprintf(errbuf, PCAP_ERRBUF_SIZE,
+			    "Error when listing files in '%s': %s", path, pcap_strerror(errno));
+			DIAG_ON_FORMAT_TRUNCATION
+			closedir(unixdir);
 			return -1;
 		}
 #endif
@@ -253,7 +264,9 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 #else
 			if (pathlen + strlen(filedata->d_name) >= sizeof(filename))
 				continue;
+			DIAG_OFF_FORMAT_TRUNCATION
 			snprintf(filename, sizeof(filename), "%s%s", path, filedata->d_name);
+			DIAG_ON_FORMAT_TRUNCATION
 #endif
 
 			fp = pcap_open_offline(filename, errbuf);
@@ -264,10 +277,15 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 				dev = (pcap_if_t *)malloc(sizeof(pcap_if_t));
 				if (dev == NULL)
 				{
-					pcap_fmt_errmsg_for_errno(errbuf,
+					pcapint_fmt_errmsg_for_errno(errbuf,
 					    PCAP_ERRBUF_SIZE, errno,
 					    "malloc() failed");
 					pcap_freealldevs(*alldevs);
+#ifdef _WIN32
+					FindClose(filehandle);
+#else
+					closedir(unixdir);
+#endif
 					return -1;
 				}
 
@@ -297,30 +315,45 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 				if (pcap_createsrcstr(tmpstring, PCAP_SRC_FILE, NULL, NULL, filename, errbuf) == -1)
 				{
 					pcap_freealldevs(*alldevs);
+#ifdef _WIN32
+					FindClose(filehandle);
+#else
+					closedir(unixdir);
+#endif
 					return -1;
 				}
 
 				dev->name = strdup(tmpstring);
 				if (dev->name == NULL)
 				{
-					pcap_fmt_errmsg_for_errno(errbuf,
+					pcapint_fmt_errmsg_for_errno(errbuf,
 					    PCAP_ERRBUF_SIZE, errno,
 					    "malloc() failed");
 					pcap_freealldevs(*alldevs);
+#ifdef _WIN32
+					FindClose(filehandle);
+#else
+					closedir(unixdir);
+#endif
 					return -1;
 				}
 
 				/*
 				 * Create the description.
 				 */
-				if (pcap_asprintf(&dev->description,
+				if (pcapint_asprintf(&dev->description,
 				    "%s '%s' %s", PCAP_TEXT_SOURCE_FILE,
 				    filename, PCAP_TEXT_SOURCE_ON_LOCAL_HOST) == -1)
 				{
-					pcap_fmt_errmsg_for_errno(errbuf,
+					pcapint_fmt_errmsg_for_errno(errbuf,
 					    PCAP_ERRBUF_SIZE, errno,
 					    "malloc() failed");
 					pcap_freealldevs(*alldevs);
+#ifdef _WIN32
+					FindClose(filehandle);
+#else
+					closedir(unixdir);
+#endif
 					return -1;
 				}
 
@@ -334,9 +367,11 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 #endif
 
 
-#ifdef _WIN32
 		/* Close the search handle. */
+#ifdef _WIN32
 		FindClose(filehandle);
+#else
+		closedir(unixdir);
 #endif
 
 		return 0;
@@ -346,7 +381,7 @@ int pcap_findalldevs_ex(const char *source, struct pcap_rmtauth *auth, pcap_if_t
 		return pcap_findalldevs_ex_remote(source, auth, alldevs, errbuf);
 
 	default:
-		pcap_strlcpy(errbuf, "Source type not supported", PCAP_ERRBUF_SIZE);
+		pcapint_strlcpy(errbuf, "Source type not supported", PCAP_ERRBUF_SIZE);
 		return -1;
 	}
 }
@@ -400,7 +435,7 @@ pcap_t *pcap_open(const char *source, int snaplen, int flags, int read_timeout, 
 		return pcap_open_rpcap(source, snaplen, flags, read_timeout, auth, errbuf);
 
 	default:
-		pcap_strlcpy(errbuf, "Source type not supported", PCAP_ERRBUF_SIZE);
+		pcapint_strlcpy(errbuf, "Source type not supported", PCAP_ERRBUF_SIZE);
 		return NULL;
 	}
 
@@ -444,6 +479,7 @@ pcap_t *pcap_open(const char *source, int snaplen, int flags, int read_timeout, 
 	return fp;
 
 fail:
+	DIAG_OFF_FORMAT_TRUNCATION
 	if (status == PCAP_ERROR)
 		snprintf(errbuf, PCAP_ERRBUF_SIZE, "%s: %s",
 		    name, fp->errbuf);
@@ -455,6 +491,7 @@ fail:
 	else
 		snprintf(errbuf, PCAP_ERRBUF_SIZE, "%s: %s",
 		    name, pcap_statustostr(status));
+	DIAG_ON_FORMAT_TRUNCATION
 	pcap_close(fp);
 	return NULL;
 }

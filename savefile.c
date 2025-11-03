@@ -28,9 +28,7 @@
  * dependent values so we can print the dump file on any architecture.
  */
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
 
 #include <pcap-types.h>
 #ifdef _WIN32
@@ -112,6 +110,16 @@ sf_setnonblock(pcap_t *p, int nonblock _U_)
 }
 
 static int
+sf_cant_set_rfmon(pcap_t *p _U_)
+{
+	/*
+	 * This is a savefile, not a device on which you can capture,
+	 * so never say it supports being put into monitor mode.
+	 */
+	return (0);
+}
+
+static int
 sf_stats(pcap_t *p, struct pcap_stat *ps _U_)
 {
 	snprintf(p->errbuf, PCAP_ERRBUF_SIZE,
@@ -181,7 +189,7 @@ sf_oid_set_request(pcap_t *p, bpf_u_int32 oid _U_, const void *data _U_,
 static u_int
 sf_sendqueue_transmit(pcap_t *p, pcap_send_queue *queue _U_, int sync _U_)
 {
-	pcap_strlcpy(p->errbuf, "Sending packets isn't supported on savefiles",
+	pcapint_strlcpy(p->errbuf, "Sending packets isn't supported on savefiles",
 	    PCAP_ERRBUF_SIZE);
 	return (0);
 }
@@ -220,7 +228,7 @@ sf_get_airpcap_handle(pcap_t *pcap _U_)
 static int
 sf_inject(pcap_t *p, const void *buf _U_, int size _U_)
 {
-	pcap_strlcpy(p->errbuf, "Sending packets isn't supported on savefiles",
+	pcapint_strlcpy(p->errbuf, "Sending packets isn't supported on savefiles",
 	    PCAP_ERRBUF_SIZE);
 	return (-1);
 }
@@ -238,7 +246,7 @@ sf_setdirection(pcap_t *p, pcap_direction_t d _U_)
 }
 
 void
-sf_cleanup(pcap_t *p)
+pcapint_sf_cleanup(pcap_t *p)
 {
 	if (p->rfile != stdin)
 		(void)fclose(p->rfile);
@@ -258,7 +266,7 @@ sf_cleanup(pcap_t *p)
  * local code page.
  */
 FILE *
-charset_fopen(const char *path, const char *mode)
+pcapint_charset_fopen(const char *path, const char *mode)
 {
 	wchar_t *utf16_path;
 #define MAX_MODE_LEN	16
@@ -268,7 +276,7 @@ charset_fopen(const char *path, const char *mode)
 	FILE *fp;
 	int save_errno;
 
-	if (pcap_utf_8_mode) {
+	if (pcapint_utf_8_mode) {
 		/*
 		 * Map from UTF-8 to UTF-16LE.
 		 * Fail if there are invalid characters in the input
@@ -350,7 +358,7 @@ pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
 	if (fname[0] == '-' && fname[1] == '\0')
 	{
 		fp = stdin;
-		if (stdin == NULL) {
+		if (fp == NULL) {
 			snprintf(errbuf, PCAP_ERRBUF_SIZE,
 			    "The standard input is not open");
 			return (NULL);
@@ -365,7 +373,7 @@ pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
 	}
 	else {
 		/*
-		 * Use charset_fopen(); on Windows, it tests whether we're
+		 * Use pcapint_charset_fopen(); on Windows, it tests whether we're
 		 * in "local code page" or "UTF-8" mode, and treats the
 		 * pathname appropriately, and on other platforms, it just
 		 * wraps fopen().
@@ -374,9 +382,9 @@ pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
 		 * support it, even though it does nothing.  For MS-DOS,
 		 * we again need it.
 		 */
-		fp = charset_fopen(fname, "rb");
+		fp = pcapint_charset_fopen(fname, "rb");
 		if (fp == NULL) {
-			pcap_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
+			pcapint_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
 			    errno, "%s", fname);
 			return (NULL);
 		}
@@ -406,7 +414,7 @@ pcap_t* pcap_hopen_offline_with_tstamp_precision(intptr_t osfd, u_int precision,
 	fd = _open_osfhandle(osfd, _O_RDONLY);
 	if ( fd < 0 )
 	{
-		pcap_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
+		pcapint_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
 		    errno, "_open_osfhandle");
 		return NULL;
 	}
@@ -414,7 +422,7 @@ pcap_t* pcap_hopen_offline_with_tstamp_precision(intptr_t osfd, u_int precision,
 	file = _fdopen(fd, "rb");
 	if ( file == NULL )
 	{
-		pcap_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
+		pcapint_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
 		    errno, "_fdopen");
 		_close(fd);
 		return NULL;
@@ -441,7 +449,7 @@ pcap_t* pcap_hopen_offline(intptr_t osfd, char *errbuf)
  * signed is that pcap_snapshot() returns an int, not an unsigned int.
  */
 bpf_u_int32
-pcap_adjust_snapshot(bpf_u_int32 linktype, bpf_u_int32 snaplen)
+pcapint_adjust_snapshot(bpf_u_int32 linktype, bpf_u_int32 snaplen)
 {
 	if (snaplen == 0 || snaplen > INT_MAX) {
 		/*
@@ -501,7 +509,7 @@ pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
 	amt_read = fread(&magic, 1, sizeof(magic), fp);
 	if (amt_read != sizeof(magic)) {
 		if (ferror(fp)) {
-			pcap_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
+			pcapint_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
 			    errno, "error reading dump file");
 		} else {
 			snprintf(errbuf, PCAP_ERRBUF_SIZE,
@@ -551,9 +559,10 @@ found:
 	p->selectable_fd = fileno(fp);
 #endif
 
-	p->read_op = pcap_offline_read;
+	p->can_set_rfmon_op = sf_cant_set_rfmon;
+	p->read_op = pcapint_offline_read;
 	p->inject_op = sf_inject;
-	p->setfilter_op = install_bpf_program;
+	p->setfilter_op = pcapint_install_bpf_program;
 	p->setdirection_op = sf_setdirection;
 	p->set_datalink_op = NULL;	/* we don't support munging link-layer headers */
 	p->getnonblock_op = sf_getnonblock;
@@ -578,12 +587,12 @@ found:
 	 * For offline captures, the standard one-shot callback can
 	 * be used for pcap_next()/pcap_next_ex().
 	 */
-	p->oneshot_callback = pcap_oneshot;
+	p->oneshot_callback = pcapint_oneshot;
 
 	/*
 	 * Default breakloop operation.
 	 */
-	p->breakloop_op = pcap_breakloop_common;
+	p->breakloop_op = pcapint_breakloop_common;
 
 	/*
 	 * Savefiles never require special BPF code generation.
@@ -615,15 +624,30 @@ pcap_fopen_offline(FILE *fp, char *errbuf)
  * If cnt > 0, return after 'cnt' packets, otherwise continue until eof.
  */
 int
-pcap_offline_read(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
+pcapint_offline_read(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
 {
 	struct bpf_insn *fcode;
-	int status = 0;
 	int n = 0;
 	u_char *data;
 
-	while (status == 0) {
+	/*
+	 * This can conceivably process more than INT_MAX packets,
+	 * which would overflow the packet count, causing it either
+	 * to look like a negative number, and thus cause us to
+	 * return a value that looks like an error, or overflow
+	 * back into positive territory, and thus cause us to
+	 * return a too-low count.
+	 *
+	 * Therefore, if the packet count is unlimited, we clip
+	 * it at INT_MAX; this routine is not expected to
+	 * process packets indefinitely, so that's not an issue.
+	 */
+	if (PACKET_COUNT_IS_UNLIMITED(cnt))
+		cnt = INT_MAX;
+
+	for (;;) {
 		struct pcap_pkthdr h;
+		int status;
 
 		/*
 		 * Has "pcap_breakloop()" been called?
@@ -643,16 +667,28 @@ pcap_offline_read(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
 		}
 
 		status = p->next_packet_op(p, &h, &data);
-		if (status) {
-			if (status == 1)
-				return (0);
+		if (status < 0) {
+			/*
+			 * Error.  Pass it back to the caller.
+			 */
 			return (status);
 		}
+		if (status == 0) {
+			/*
+			 * EOF.  Nothing more to process;
+			 */
+			break;
+		}
 
+		/*
+		 * OK, we've read a packet; run it through the filter
+		 * and, if it passes, process it.
+		 */
 		if ((fcode = p->fcode.bf_insns) == NULL ||
-		    pcap_filter(fcode, data, h.len, h.caplen)) {
+		    pcapint_filter(fcode, data, h.len, h.caplen)) {
 			(*callback)(user, &h, data);
-			if (++n >= cnt && cnt > 0)
+			n++;	/* count the packet */
+			if (n >= cnt)
 				break;
 		}
 	}
