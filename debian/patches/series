@@ -3,3 +3,4 @@ man-section.diff
 hurd.diff
 kfreebsd.diff
 pcap-config.diff
+CVE-2023-7256.patch
