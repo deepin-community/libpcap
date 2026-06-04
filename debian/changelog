@@ -1,3 +1,12 @@
+libpcap (1.10.1-4deepin1) unstable; urgency=medium
+
+  * Fix CVE-2023-7256: Use-after-free/double-free in sock_initaddress()
+    by having the function return a pointer to the addrinfo list on
+    success (or NULL on failure) instead of using an output parameter,
+    avoiding ambiguity about whether freeaddrinfo() has already been
+    called.
+
+ -- deepin-ci-robot <packages@deepin.org>  Thu, 04 Jun 2026 17:23:48 +0800
 libpcap (1.10.1-4) unstable; urgency=medium
 
   * Fix more issues with target dependencies in debian/patches/shared-lib.diff,
