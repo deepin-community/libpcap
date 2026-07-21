@@ -5,3 +5,4 @@ kfreebsd.diff
 pcap-config.diff
 CVE-2023-7256.patch
 CVE-2025-11961.patch
+CVE-2024-8006.patch
