@@ -1,3 +1,9 @@
+libpcap (1.10.1-4deepin3) unstable; urgency=medium
+
+  * fix(cve): CVE-2024-8006
+
+ -- deepin-ci-robot <packages@deepin.org>  Tue, 21 Jul 2026 10:32:54 +0800
+
 libpcap (1.10.1-4deepin2) unstable; urgency=medium
 
   * fix(cve): CVE-2025-11961
