@@ -1,3 +1,9 @@
+libpcap (1.10.1-4deepin4) unstable; urgency=medium
+
+  * Rebuild with LTO enabled (dpkg vendor feature optimize/lto).
+
+ -- tunaichao <tunaichao@uniontech.com>  Thu, 10 Sep 2026 18:56:03 +0800
+
 libpcap (1.10.1-4deepin3) unstable; urgency=medium
 
   * fix(cve): CVE-2024-8006
