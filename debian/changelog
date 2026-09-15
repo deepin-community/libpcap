@@ -1,3 +1,12 @@
+libpcap (1.10.1-4deepin4) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-31911 (medium) - CVE-2026-31911: Fail opcodes
+    safely in the BPF interpreter.   Upstream: https://github.com/the-
+    tcpdump-
+    group/libpcap/commit/a715bcdde830299cba4171514385cb17ec19b6e9.patch
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 16 Sep 2026 06:12:26 +0800
+
 libpcap (1.10.1-4deepin3) unstable; urgency=medium
 
   * fix(cve): CVE-2024-8006
