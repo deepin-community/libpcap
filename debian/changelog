@@ -1,3 +1,20 @@
+libpcap (1.10.1-4deepin4) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-31911 (medium) - CVE-2026-31911: Fail opcodes
+    safely in the BPF interpreter.   Upstream: https://github.com/the-
+    tcpdump-
+    group/libpcap/commit/a715bcdde830299cba4171514385cb17ec19b6e9.patch
+  * fix(cve): CVE-2026-18238 (medium) - CVE-2026-18238: Fix
+    RPCAP_MSG_PACKET validation.   Upstream: https://github.com/the-
+    tcpdump-
+    group/libpcap/commit/b9590d482986d64673712460aae1d48d11fa0473
+  * fix(cve): CVE-2026-6244 (medium) - CVE-2026-6244: Avoid division by
+    zero via pcap_offline_filter()   Upstream: https://github.com/the-
+    tcpdump-
+    group/libpcap/commit/0b2b1ad4a1796513613ff68e9dc09049cc8e0af4
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 16 Sep 2026 06:12:26 +0800
+
 libpcap (1.10.1-4deepin3) unstable; urgency=medium
 
   * fix(cve): CVE-2024-8006
