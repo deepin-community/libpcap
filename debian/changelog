@@ -12,6 +12,10 @@ libpcap (1.10.1-4deepin4) unstable; urgency=medium
     zero via pcap_offline_filter()   Upstream: https://github.com/the-
     tcpdump-
     group/libpcap/commit/0b2b1ad4a1796513613ff68e9dc09049cc8e0af4
+  * fix(cve): CVE-2026-6554 (medium) - CVE-2026-6554: Limit "ja L"
+    looping in pcap_offline_filter()   Upstream: https://github.com/the-
+    tcpdump-
+    group/libpcap/commit/ff3c83475ac303c6b681c52ad0b6e14795a8e0ce
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 16 Sep 2026 06:12:26 +0800
 
