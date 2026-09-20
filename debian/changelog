@@ -19,6 +19,10 @@ libpcap (1.10.1-4deepin4) unstable; urgency=medium
   * fix(cve): CVE-2026-0799 (high) - CVE-2026-0799: Access M[] safely in
     the BPF interpreter.   Upstream: https://github.com/the-tcpdump-
     group/libpcap/commit/48e8960a7108e9e828f9d7bdc7e97bdab841aec7.patch
+  * fix(cve): CVE-2026-31912 (medium) - CVE-2026-31912: Mind the program
+    bounds in pcap_offline_filter()   Upstream: https://github.com/the-
+    tcpdump-
+    group/libpcap/commit/d3f358d3cffbe1ecb94d5284b3e81f052a0adcb9
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 16 Sep 2026 06:12:26 +0800
 
