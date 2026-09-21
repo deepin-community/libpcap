@@ -12,3 +12,4 @@ CVE-2026-6244.patch
 CVE-2026-6554.patch
 CVE-2026-0799.patch
 CVE-2026-31912.patch
+BPF-lsh-rsh-k-guard.patch

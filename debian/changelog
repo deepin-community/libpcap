@@ -1,5 +1,6 @@
 libpcap (1.10.1-4deepin4) unstable; urgency=medium
 
+  [ deepin-ci-robot ]
   * fix(cve): CVE-2026-31911 (medium) - CVE-2026-31911: Fail opcodes
     safely in the BPF interpreter.   Upstream: https://github.com/the-
     tcpdump-
@@ -23,6 +24,13 @@ libpcap (1.10.1-4deepin4) unstable; urgency=medium
     bounds in pcap_offline_filter()   Upstream: https://github.com/the-
     tcpdump-
     group/libpcap/commit/d3f358d3cffbe1ecb94d5284b3e81f052a0adcb9
+
+  [ lichenggang ]
+  * fix(cve): CVE-2026-31912 - Backport the upstream BPF_JA bounds
+    check, a jump could still move the program counter out of the filter
+    program.
+  * Guard constant BPF shifts by more than 31 bits in the interpreter
+    and the validator (upstream commit 1d1ea168).
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 16 Sep 2026 06:12:26 +0800
 
